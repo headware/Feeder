@@ -24,16 +24,16 @@ import android.content.IntentFilter
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import android.support.v4.app.Fragment
-import android.support.v4.app.LoaderManager
-import android.support.v4.content.AsyncTaskLoader
-import android.support.v4.content.CursorLoader
-import android.support.v4.content.Loader
-import android.support.v4.content.LocalBroadcastManager
-import android.support.v4.widget.SwipeRefreshLayout
-import android.support.v7.widget.GridLayoutManager
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.fragment.app.Fragment
+import androidx.loader.app.LoaderManager
+import androidx.loader.content.AsyncTaskLoader
+import androidx.loader.content.CursorLoader
+import androidx.loader.content.Loader
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -98,11 +98,11 @@ const val ARG_FEED_TAG = "feed_tag"
 const val ONLY_UNREAD = COL_UNREAD + " IS 1 "
 const val AND_UNREAD = " AND " + ONLY_UNREAD
 
-class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
+class FeedFragment : androidx.fragment.app.Fragment(), androidx.loader.app.LoaderManager.LoaderCallbacks<Any> {
 
     private var adapter: FeedAdapter? = null
-    private var recyclerView: RecyclerView? = null
-    internal var swipeRefreshLayout: SwipeRefreshLayout? = null
+    private var recyclerView: androidx.recyclerview.widget.RecyclerView? = null
+    internal var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout? = null
     private var emptyView: View? = null
     private var emptyAddFeed: View? = null
     private var emptyOpenFeeds: View? = null
@@ -115,7 +115,7 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
     private var feedTag: String? = ""
     private var firstFeedLoad: Boolean = true
     private var customTitle = ""
-    private var layoutManager: LinearLayoutManager? = null
+    private var layoutManager: androidx.recyclerview.widget.LinearLayoutManager? = null
     private var checkAllButton: View? = null
     private var notify = 0
     private var notifyCheck: CheckedTextView? = null
@@ -212,7 +212,7 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         val rootView = inflater.inflate(R.layout.fragment_feed, container, false)
-        recyclerView = rootView.findViewById<View>(android.R.id.list) as RecyclerView
+        recyclerView = rootView.findViewById<View>(android.R.id.list) as androidx.recyclerview.widget.RecyclerView
 
         // improve performance if you know that changes in content
         // do not change the size of the RecyclerView
@@ -221,10 +221,10 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
         if (TabletUtils.isTablet(activity)) {
             val cols = TabletUtils.numberOfFeedColumns(activity)
             // use a grid layout
-            layoutManager = GridLayoutManager(activity,
+            layoutManager = androidx.recyclerview.widget.GridLayoutManager(activity,
                     cols)
             // I want the padding header to span the entire width
-            (layoutManager as GridLayoutManager).spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            (layoutManager as androidx.recyclerview.widget.GridLayoutManager).spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
                 override fun getSpanSize(position: Int): Int {
                     return if (HEADERTYPE == adapter!!.getItemViewType(position)) {
                         cols
@@ -240,7 +240,7 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
             recyclerView!!.addItemDecoration(DividerColor(activity, DividerColor.HORIZONTAL_LIST))
         } else {
             // use a linear layout manager
-            layoutManager = LinearLayoutManager(activity)
+            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(activity)
             // I want some dividers
             //            recyclerView.addItemDecoration(new DividerColor
             //                    (getActivity(), DividerColor.VERTICAL_LIST, 0, 1));
@@ -248,7 +248,7 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
         recyclerView!!.layoutManager = layoutManager
 
         // Setup swipe refresh
-        swipeRefreshLayout = rootView.findViewById<View>(R.id.swiperefresh) as SwipeRefreshLayout
+        swipeRefreshLayout = rootView.findViewById<View>(R.id.swiperefresh) as androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
         // The arrow will cycle between these colors (in order)
         swipeRefreshLayout!!.setColorSchemeResources(
@@ -319,13 +319,13 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
         // List might be shorter than screen once item has been read
         (activity as BaseActivity).showActionBar()
         // Listen on broadcasts
-        LocalBroadcastManager.getInstance(activity!!).registerReceiver(syncReceiver,
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(activity!!).registerReceiver(syncReceiver,
                 IntentFilter(SYNC_BROADCAST))
     }
 
     override fun onPause() {
         // Unregister receiver
-        LocalBroadcastManager.getInstance(activity!!).unregisterReceiver(syncReceiver)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(activity!!).unregisterReceiver(syncReceiver)
         swipeRefreshLayout!!.isRefreshing = false
         super.onPause()
     }
@@ -481,9 +481,9 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
         loaderManager.restartLoader(FEEDITEMS_LOADER, Bundle.EMPTY, this)
     }
 
-    override fun onCreateLoader(ID: Int, args: Bundle?): Loader<Any> {
+    override fun onCreateLoader(ID: Int, args: Bundle?): androidx.loader.content.Loader<Any> {
         @Suppress("UNCHECKED_CAST")
-        val loader: AsyncTaskLoader<Any> = when (ID) {
+        val loader: androidx.loader.content.AsyncTaskLoader<Any> = when (ID) {
             FEEDITEMS_LOADER -> FeedItemDeltaCursorLoader(activity!!,
                     URI_FEEDITEMS.buildUpon()
                             .appendQueryParameter(QUERY_PARAM_SKIP, "${adapter?.skipCount() ?: 0}")
@@ -491,11 +491,11 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
                     FEED_ITEM_FIELDS_FOR_LIST,
                     loaderSelection,
                     loaderSelectionArgs,
-                    "$COL_PUBDATE DESC") as AsyncTaskLoader<Any>
+                    "$COL_PUBDATE DESC") as androidx.loader.content.AsyncTaskLoader<Any>
             FEED_LOADER -> {
-                CursorLoader(activity!!,
+                androidx.loader.content.CursorLoader(activity!!,
                         Uri.withAppendedPath(URI_FEEDS, "${this.id}"),
-                        FEED_FIELDS, null, null, null) as AsyncTaskLoader<Any>
+                        FEED_FIELDS, null, null, null) as androidx.loader.content.AsyncTaskLoader<Any>
             }
         // FEED_SETTINGS_LOADER
             else -> {
@@ -515,9 +515,9 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
                         whereArgs = null
                     }
                 }
-                CursorLoader(activity!!, URI_FEEDS,
+                androidx.loader.content.CursorLoader(activity!!, URI_FEEDS,
                         Util.ToStringArray("DISTINCT $COL_NOTIFY"),
-                        where, whereArgs, null) as AsyncTaskLoader<Any>
+                        where, whereArgs, null) as androidx.loader.content.AsyncTaskLoader<Any>
             }
         }
 
@@ -526,7 +526,7 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun onLoadFinished(cursorLoader: Loader<Any?>, result: Any?) {
+    override fun onLoadFinished(cursorLoader: androidx.loader.content.Loader<Any?>, result: Any?) {
         when {
             FEEDITEMS_LOADER == cursorLoader.id -> {
                 val map = result as Map<FeedItemSQL, Int>
@@ -572,10 +572,10 @@ class FeedFragment : Fragment(), LoaderManager.LoaderCallbacks<Any> {
         }
     }
 
-    override fun onLoaderReset(cursorLoader: Loader<Any?>) {
+    override fun onLoaderReset(cursorLoader: androidx.loader.content.Loader<Any?>) {
     }
 
-    inner class HeaderHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+    inner class HeaderHolder(itemView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView)
 
     companion object {
 

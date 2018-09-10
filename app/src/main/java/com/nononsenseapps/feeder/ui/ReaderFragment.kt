@@ -22,13 +22,13 @@ import android.content.Intent
 import android.database.Cursor
 import android.graphics.Point
 import android.os.Bundle
-import android.support.v4.app.Fragment
-import android.support.v4.app.FragmentActivity
-import android.support.v4.app.LoaderManager
-import android.support.v4.content.CursorLoader
-import android.support.v4.content.Loader
-import android.support.v4.view.MenuItemCompat
-import android.support.v7.widget.ShareActionProvider
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.loader.app.LoaderManager
+import androidx.loader.content.CursorLoader
+import androidx.loader.content.Loader
+import androidx.core.view.MenuItemCompat
+import androidx.appcompat.widget.ShareActionProvider
 import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.Menu
@@ -74,7 +74,7 @@ const val ARG_DATE = "date"
 private const val TEXT_LOADER = 1
 private const val ITEM_LOADER = 2
 
-class ReaderFragment : Fragment(), LoaderManager.LoaderCallbacks<Any?> {
+class ReaderFragment : androidx.fragment.app.Fragment(), androidx.loader.app.LoaderManager.LoaderCallbacks<Any?> {
 
     private val dateTimeFormat = DateTimeFormat.mediumDate().withLocale(Locale.getDefault())
 
@@ -266,20 +266,20 @@ class ReaderFragment : Fragment(), LoaderManager.LoaderCallbacks<Any?> {
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun onCreateLoader(id: Int, args: Bundle?): Loader<Any?> = when (id) {
+    override fun onCreateLoader(id: Int, args: Bundle?): androidx.loader.content.Loader<Any?> = when (id) {
         ITEM_LOADER -> {
-            val cl = CursorLoader(context!!, URI_FEEDITEMS,
+            val cl = androidx.loader.content.CursorLoader(context!!, URI_FEEDITEMS,
                     FEED_ITEM_FIELDS,
                     "$COL_ID IS ?",
                     arrayOf(java.lang.Long.toString(rssItem!!.id)), null)
             cl.setUpdateThrottle(100)
-            cl as Loader<Any?>
+            cl as androidx.loader.content.Loader<Any?>
         }
         // TEXT_LOADER
         else -> {
-            ImageTextLoader(activity as FragmentActivity, rssItem!!.description, rssItem?.feedUrl
+            ImageTextLoader(activity as androidx.fragment.app.FragmentActivity, rssItem!!.description, rssItem?.feedUrl
                     ?: sloppyLinkToStrictURL(""),
-                    maxImageSize(), PrefUtils.shouldLoadImages(activity!!)) as Loader<Any?>
+                    maxImageSize(), PrefUtils.shouldLoadImages(activity!!)) as androidx.loader.content.Loader<Any?>
         }
     }
 
@@ -298,7 +298,7 @@ class ReaderFragment : Fragment(), LoaderManager.LoaderCallbacks<Any?> {
         return size
     }
 
-    override fun onLoadFinished(loader: Loader<Any?>,
+    override fun onLoadFinished(loader: androidx.loader.content.Loader<Any?>,
                                 data: Any?) {
         if (loader.id == ITEM_LOADER) {
             val cursor = data as Cursor?
@@ -317,7 +317,7 @@ class ReaderFragment : Fragment(), LoaderManager.LoaderCallbacks<Any?> {
         loaderManager.destroyLoader(loader.id)
     }
 
-    override fun onLoaderReset(loader: Loader<Any?>) {
+    override fun onLoaderReset(loader: androidx.loader.content.Loader<Any?>) {
         // nothing really
     }
 }

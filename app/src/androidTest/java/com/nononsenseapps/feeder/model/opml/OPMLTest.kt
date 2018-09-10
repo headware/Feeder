@@ -1,10 +1,10 @@
 package com.nononsenseapps.feeder.model.opml
 
 import android.content.Context
-import android.support.test.InstrumentationRegistry.getContext
-import android.support.test.filters.MediumTest
-import android.support.test.filters.SmallTest
-import android.support.test.runner.AndroidJUnit4
+import androidx.test.InstrumentationRegistry.getContext
+import androidx.test.filters.MediumTest
+import androidx.test.filters.SmallTest
+import androidx.test.runner.AndroidJUnit4
 import com.nononsenseapps.feeder.db.COL_TAG
 import com.nononsenseapps.feeder.db.FeedSQL
 import com.nononsenseapps.feeder.db.URI_FEEDS

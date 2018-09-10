@@ -9,8 +9,8 @@ import android.content.Loader
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.util.Log
 import android.util.TypedValue
 import android.view.KeyEvent
@@ -70,7 +70,7 @@ class EditFeedActivity : Activity() {
     private lateinit var textTag: AutoCompleteTextView
     private lateinit var textSearch: EditText
     private lateinit var detailsFrame: View
-    private lateinit var listResults: RecyclerView
+    private lateinit var listResults: androidx.recyclerview.widget.RecyclerView
     private lateinit var resultAdapter: ResultsAdapter
     private lateinit var searchFrame: View
     private var feedUrl: String? = null
@@ -111,7 +111,7 @@ class EditFeedActivity : Activity() {
         resultAdapter = ResultsAdapter()
         //listResults.emptyView = emptyText
         listResults.setHasFixedSize(true)
-        listResults.layoutManager = LinearLayoutManager(this)
+        listResults.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         listResults.adapter = resultAdapter
 
         textSearch.setOnEditorActionListener(TextView.OnEditorActionListener { _, actionId, event ->
@@ -404,7 +404,7 @@ class EditFeedActivity : Activity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private inner class FeedResult(view: View) : RecyclerView.ViewHolder(view), View.OnClickListener {
+    private inner class FeedResult(view: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(view), View.OnClickListener {
 
         var textTitle: TextView = view.findViewById(R.id.feed_title)
         var textUrl: TextView = view.findViewById(R.id.feed_url)
@@ -422,7 +422,7 @@ class EditFeedActivity : Activity() {
         }
     }
 
-    private inner class ResultsAdapter : RecyclerView.Adapter<FeedResult>() {
+    private inner class ResultsAdapter : androidx.recyclerview.widget.RecyclerView.Adapter<FeedResult>() {
 
         private var items: List<Feed> = emptyList()
         var data: List<Feed>

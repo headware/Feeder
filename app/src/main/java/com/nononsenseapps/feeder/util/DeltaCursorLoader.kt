@@ -3,7 +3,7 @@ package com.nononsenseapps.feeder.util
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
-import android.support.v4.content.AsyncTaskLoader
+import androidx.loader.content.AsyncTaskLoader
 import android.util.Log
 import java.io.FileDescriptor
 import java.io.PrintWriter
@@ -24,7 +24,7 @@ abstract class DeltaCursorLoader<T: Any>(context: Context,
                                          val projection: Array<String>,
                                          val selection: String?,
                                          val selectionArgs: Array<String>?,
-                                         val sortOrder: String?) : AsyncTaskLoader<ResultMap<T>?>(context) {
+                                         val sortOrder: String?) : androidx.loader.content.AsyncTaskLoader<ResultMap<T>?>(context) {
     // This will call ForceLoad() when data changes
     internal val observer: ForceLoadContentObserver = ForceLoadContentObserver()
 

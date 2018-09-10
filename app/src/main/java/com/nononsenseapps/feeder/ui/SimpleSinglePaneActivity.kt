@@ -19,7 +19,7 @@ package com.nononsenseapps.feeder.ui
 import android.app.Fragment
 import android.content.Intent
 import android.os.Bundle
-import android.support.annotation.LayoutRes
+import androidx.annotation.LayoutRes
 
 import com.nononsenseapps.feeder.R
 

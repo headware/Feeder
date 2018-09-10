@@ -35,6 +35,6 @@
         android:id="@+id/action_share"
         app:showAsAction="ifRoom"
         app:actionProviderClass=
-        "android.support.v7.widget.ShareActionProvider"
+        "androidx.appcompat.widget.ShareActionProvider"
         android:title="@string/share" />
 </menu>
