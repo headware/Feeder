@@ -1,24 +1,15 @@
 package com.nononsenseapps.feeder.model.opml
 
-import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.nononsenseapps.feeder.coroutines.Background
-import com.nononsenseapps.feeder.db.COL_TAG
-import com.nononsenseapps.feeder.db.FeedSQL
-import com.nononsenseapps.feeder.db.asFeed
-import com.nononsenseapps.feeder.model.OPMLContenProvider
+import com.nononsenseapps.feeder.db.room.AppDatabase
+import com.nononsenseapps.feeder.db.room.Feed
 import com.nononsenseapps.feeder.model.requestFeedSync
-import com.nononsenseapps.feeder.util.forEach
-import com.nononsenseapps.feeder.util.getString
 import com.nononsenseapps.feeder.util.makeToast
-import com.nononsenseapps.feeder.util.notifyAllUris
-import com.nononsenseapps.feeder.util.queryFeeds
-import com.nononsenseapps.feeder.util.queryTagsWithCounts
 import kotlinx.coroutines.experimental.android.UI
 import kotlinx.coroutines.experimental.launch
-import java.util.*
 import kotlin.system.measureTimeMillis
 
 /**
@@ -29,9 +20,11 @@ fun exportOpmlInBackground(context: Context, uri: Uri) = launch(Background) {
     val appContext = context.applicationContext
     try {
         val time = measureTimeMillis {
-            writeOutputStream(appContext.contentResolver.openOutputStream(uri),
-                    tags(appContext.contentResolver),
-                    feedsWithTags(appContext.contentResolver))
+            appContext.contentResolver.openOutputStream(uri)?.let {
+                writeOutputStream(it,
+                        tags(appContext),
+                        feedsWithTags(appContext))
+            }
         }
         Log.d("OPML", "Exported OPML in $time ms on ${Thread.currentThread().name}")
     } catch (e: Throwable) {
@@ -48,13 +41,15 @@ fun exportOpmlInBackground(context: Context, uri: Uri) = launch(Background) {
  */
 fun importOpmlInBackground(context: Context, uri: Uri) = launch(Background) {
     val appContext = context.applicationContext
+    val db = AppDatabase.getInstance(context)
     try {
         val time = measureTimeMillis {
-            val parser = OpmlParser(OPMLContenProvider(appContext))
+            val parser = OpmlParser(OPMLToRoom(db))
             appContext.contentResolver.openInputStream(uri).use {
-                parser.parseInputStream(it)
+                it?.let { stream ->
+                    parser.parseInputStream(stream)
+                }
             }
-            appContext.contentResolver.notifyAllUris()
             requestFeedSync()
         }
         Log.d("OPML", "Imported OPML in $time ms on ${Thread.currentThread().name}")
@@ -66,28 +61,12 @@ fun importOpmlInBackground(context: Context, uri: Uri) = launch(Background) {
     }
 }
 
-private fun tags(contentResolver: ContentResolver): Iterable<String?> {
-    val tags = ArrayList<String?>()
+private fun tags(context: Context): Iterable<String> =
+        AppDatabase.getInstance(context).feedDao().loadTags()
 
-    contentResolver.queryTagsWithCounts(columns = listOf(COL_TAG)) { cursor ->
-        cursor.forEach {
-            tags.add(it.getString(COL_TAG))
-        }
-    }
-
-    return tags
-}
-
-private fun feedsWithTags(contentResolver: ContentResolver): (String?) -> Iterable<FeedSQL> {
+private fun feedsWithTags(context: Context): (String) -> Iterable<Feed> {
+    val dao = AppDatabase.getInstance(context).feedDao()
     return { tag ->
-        val feeds = ArrayList<FeedSQL>()
-
-        contentResolver.queryFeeds(where = "$COL_TAG IS ?", params = listOf(tag ?: "")) { cursor ->
-            cursor.forEach {
-                feeds.add(it.asFeed())
-            }
-        }
-
-        feeds
+        dao.loadFeeds(tag = tag)
     }
 }

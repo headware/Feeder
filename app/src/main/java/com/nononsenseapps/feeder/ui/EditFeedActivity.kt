@@ -1,16 +1,10 @@
 package com.nononsenseapps.feeder.ui
 
 import android.app.Activity
-import android.app.LoaderManager
 import android.content.Context
-import android.content.CursorLoader
 import android.content.Intent
-import android.content.Loader
-import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import android.util.Log
 import android.util.TypedValue
 import android.view.KeyEvent
@@ -22,11 +16,10 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FilterQueryProvider
-import android.widget.SimpleCursorAdapter
 import android.widget.TextView
 import android.widget.Toast
 import com.nononsenseapps.feeder.R
@@ -35,35 +28,29 @@ import com.nononsenseapps.feeder.db.COL_CUSTOM_TITLE
 import com.nononsenseapps.feeder.db.COL_ID
 import com.nononsenseapps.feeder.db.COL_TAG
 import com.nononsenseapps.feeder.db.COL_TITLE
-import com.nononsenseapps.feeder.db.COL_URL
 import com.nononsenseapps.feeder.db.URI_FEEDS
-import com.nononsenseapps.feeder.db.URI_TAGSWITHCOUNTS
-import com.nononsenseapps.feeder.db.Util
+import com.nononsenseapps.feeder.db.room.AppDatabase
+import com.nononsenseapps.feeder.db.room.ID_UNSET
+import com.nononsenseapps.feeder.db.room.upsertFeed
 import com.nononsenseapps.feeder.model.FeedParser
 import com.nononsenseapps.feeder.model.requestFeedSync
-import com.nononsenseapps.feeder.util.contentValues
 import com.nononsenseapps.feeder.util.feedParser
-import com.nononsenseapps.feeder.util.insertFeedWith
-import com.nononsenseapps.feeder.util.notifyAllUris
-import com.nononsenseapps.feeder.util.setString
 import com.nononsenseapps.feeder.util.sloppyLinkToStrictURL
-import com.nononsenseapps.feeder.util.updateFeedWith
+import com.nononsenseapps.feeder.util.sloppyLinkToStrictURLNoThrows
 import com.nononsenseapps.feeder.views.FloatLabelLayout
 import com.nononsenseapps.jsonfeed.Feed
 import kotlinx.coroutines.experimental.android.UI
-import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.experimental.withContext
 import java.net.URL
 
 const val TEMPLATE = "template"
-private const val LOADER_TAG_SUGGESTIONS = 1
-private const val TAGSFILTER = "TAGSFILTER"
 
 
 class EditFeedActivity : Activity() {
 
     private var shouldFinishBack = false
-    private var id: Long = -1
+    private var id: Long = ID_UNSET
     // Views and shit
     private lateinit var textTitle: EditText
     private lateinit var textUrl: EditText
@@ -164,6 +151,8 @@ class EditFeedActivity : Activity() {
             false
         })
 
+        val dao = AppDatabase.getInstance(this).feedDao()
+
         val addButton = findViewById<Button>(R.id.add_button)
         addButton
                 .setOnClickListener {
@@ -174,32 +163,30 @@ class EditFeedActivity : Activity() {
                     } else {
                         title
                     }
-                    val values = contentValues {
-                        setString(COL_TITLE to feedTitle)
-                        setString(COL_CUSTOM_TITLE to customTitle)
-                        setString(COL_TAG to textTag.text.toString().trim())
-                        setString(COL_URL to textUrl.text.toString().trim())
-                    }
+
+                    val feed = com.nononsenseapps.feeder.db.room.Feed(
+                            id = id,
+                            title = feedTitle,
+                            customTitle = customTitle,
+                            tag = textTag.text.toString().trim(),
+                            url = sloppyLinkToStrictURLNoThrows(textUrl.text.toString().trim())
+                    )
 
                     launch(UI) {
-                        val feedId: Long = async(BackgroundUI) {
-                            if (id < 1) {
-                                contentResolver.insertFeedWith(values)
-                            } else {
-                                contentResolver.updateFeedWith(id, values)
-                                id
-                            }
-                        }.await()
+                        val feedId: Long? = withContext(BackgroundUI) {
+                            dao.upsertFeed(feed)
+                        }
 
-                        launch(BackgroundUI) {
-                            contentResolver.notifyAllUris()
-                            requestFeedSync(feedId)
+                        feedId?.let {
+                            launch(BackgroundUI) {
+                                requestFeedSync(feedId)
+                            }
                         }
 
                         val intent = Intent(Intent.ACTION_VIEW, Uri.withAppendedPath(URI_FEEDS, "$feedId"))
                         intent.putExtra(ARG_FEED_TITLE, title)
-                                .putExtra(ARG_FEED_URL, values.getAsString(COL_URL))
-                                .putExtra(ARG_FEED_TAG, values.getAsString(COL_TAG))
+                                .putExtra(ARG_FEED_URL, feed.url)
+                                .putExtra(ARG_FEED_TAG, feed.tag)
 
                         setResult(RESULT_OK, intent)
                         finish()
@@ -216,15 +203,15 @@ class EditFeedActivity : Activity() {
         if (i != null) {
             shouldFinishBack = i.getBooleanExtra(SHOULD_FINISH_BACK, false)
             // Existing id
-            id = i.getLongExtra(COL_ID, -1)
+            id = i.getLongExtra(COL_ID, ID_UNSET)
             // Edit like existing, but it's really new
             val template = i.getBooleanExtra(TEMPLATE, false)
 
             // Existing item
-            if (id > 0 || template) {
+            if (id > ID_UNSET || template) {
                 searchFrame.visibility = View.GONE
                 detailsFrame.visibility = View.VISIBLE
-                if (id > 0) {
+                if (id > ID_UNSET) {
                     // Don't allow editing url, but allow copying the text
                     //textUrl.setInputType(InputType.TYPE_NULL);
                     //textUrl.setTextIsSelectable(true);
@@ -270,66 +257,19 @@ class EditFeedActivity : Activity() {
         }
 
         // Create an adapter
-        val tagsAdapter = SimpleCursorAdapter(this,
-                android.R.layout.simple_list_item_1, null, Util.ToStringArray(COL_TAG),
-                Util.ToIntArray(android.R.id.text1), 0)
-
-        // Create a loader manager
-        val loaderCallbacks = object : LoaderManager.LoaderCallbacks<Cursor> {
-            override fun onCreateLoader(id: Int,
-                                        args: Bundle?): Loader<Cursor> {
-                var filter: String? = null
-                if (args != null && args.containsKey(TAGSFILTER)) {
-                    filter = COL_TAG + " LIKE '" + args
-                            .getCharSequence(TAGSFILTER, "") + "%'"
-                }
-                val cl = CursorLoader(this@EditFeedActivity,
-                        URI_TAGSWITHCOUNTS,
-                        Util.ToStringArray(COL_ID,
-                                COL_TAG), filter, null,
-                        Util.SortAlphabeticNoCase(COL_TAG))
-                cl.setUpdateThrottle(200)
-                return cl
+        launch(UI) {
+            val data = withContext(BackgroundUI) {
+                dao.loadTags()
             }
 
-            override fun onLoadFinished(loader: Loader<Cursor>,
-                                        data: Cursor) {
-                tagsAdapter.swapCursor(data)
-            }
+            val tagsAdapter = ArrayAdapter<String>(this@EditFeedActivity,
+                    android.R.layout.simple_list_item_1,
+                    android.R.id.text1,
+                    data)
 
-            override fun onLoaderReset(loader: Loader<Cursor>) {
-                tagsAdapter.swapCursor(null)
-            }
+            // Set the adapter
+            textTag.setAdapter(tagsAdapter)
         }
-
-        // Tell adapter how to return result
-        tagsAdapter.cursorToStringConverter = SimpleCursorAdapter.CursorToStringConverter { cursor ->
-            if (cursor == null) {
-                return@CursorToStringConverter null
-            }
-
-            cursor.getString(1)
-        }
-
-        // Tell adapter how to filter
-        tagsAdapter.filterQueryProvider = FilterQueryProvider { constraint ->
-            // Restart loader with filter
-            val filter = Bundle()
-            filter.putCharSequence(TAGSFILTER, constraint)
-            loaderManager.restartLoader(LOADER_TAG_SUGGESTIONS,
-                    filter, loaderCallbacks)
-            // Return null since existing cursor is going to be closed
-            null
-        }
-
-        // Set the adapter
-        textTag.setAdapter(tagsAdapter)
-
-        // Start suggestions loader
-        val args = Bundle()
-        args.putCharSequence(TAGSFILTER, textTag.text)
-        loaderManager.restartLoader(LOADER_TAG_SUGGESTIONS,
-                args, loaderCallbacks)
     }
 
     private fun shouldBeFloatingWindow(): Boolean {

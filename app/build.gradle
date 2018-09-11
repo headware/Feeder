@@ -1,5 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
 
 android {
   buildToolsVersion "$build_tools_version"
@@ -60,6 +62,8 @@ kotlin {
 }
 
 dependencies {
+  kapt "androidx.room:room-compiler:$room_version"
+  implementation "androidx.room:room-runtime:$room_version"
 
   implementation "android.arch.work:work-runtime-ktx:$work_version"
 
@@ -68,6 +72,9 @@ dependencies {
   implementation "androidx.legacy:legacy-support-v4:$legacy_support_version"
   implementation "androidx.appcompat:appcompat:$appcompat_version"
   implementation "com.google.android.material:material:$material_version"
+
+  // ViewModel and LiveData
+  implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
 
   // To support SDK18
   implementation "com.nononsenseapps:filepicker:4.1.0"
@@ -96,7 +103,7 @@ dependencies {
   // For doing coroutines on UI thread
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:0.22"
   // tests
-  testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+  testImplementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
   testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
   testImplementation "junit:junit:4.12"
   testImplementation "org.mockito:mockito-core:2.13.0"
